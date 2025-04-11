@@ -43,17 +43,18 @@ class MaskGIT(nn.Module):
         seq_len: Sequence length expected (for learned positional embeddings).
         init_std: Standard deviation for weight initialization
     """
+
     def __init__(
-        self,
-        seq_read_key: str = 'input_ids',
-        dim: int = 512,
-        depth: int = 8,
-        head_dim: int = 64,
-        mlp_ratio: float = 4.0,
-        use_bias: bool = False,
-        vocab_size: int = 10000,
-        seq_len: int = 256,
-        init_std: float = 0.02,
+            self,
+            seq_read_key: str = 'input_ids',
+            dim: int = 512,
+            depth: int = 8,
+            head_dim: int = 64,
+            mlp_ratio: float = 4.0,
+            use_bias: bool = False,
+            vocab_size: int = 10000,
+            seq_len: int = 256,
+            init_std: float = 0.02,
     ):
         super().__init__()
         self.seq_read_key = seq_read_key
@@ -62,24 +63,24 @@ class MaskGIT(nn.Module):
         self.input_embedding = nn.Embedding(vocab_size, dim)
         self.positional_embedding = nn.Parameter(torch.randn((seq_len, dim)))
         self.mask_token = nn.Parameter(torch.randn(dim))
-        
+
         self.trunk = TransformerTrunk(dim, depth, head_dim, mlp_ratio, use_bias)
 
         self.out_norm = LayerNorm(dim)
         self.to_logits = nn.Linear(dim, vocab_size, bias=False)
 
-        self.initialize_weights() # Weight initialization
+        self.initialize_weights()  # Weight initialization
 
     @property
     def device(self):
         return next(self.parameters()).device
 
     def initialize_weights(self):
-        """Initialize the weights of the model.""" 
-        self.apply(self._init_weights) # Initialize nn.Linear and nn.Embedding
-        nn.init.normal_(self.positional_embedding, mean=0.0, std=self.init_std) # Initialize the positional embeddings
-        nn.init.normal_(self.mask_token, mean=0.0, std=self.init_std) # Initialize the mask token
-        nn.init.constant_(self.to_logits.weight, 0) # Zero-init the output projection
+        """Initialize the weights of the model."""
+        self.apply(self._init_weights)  # Initialize nn.Linear and nn.Embedding
+        nn.init.normal_(self.positional_embedding, mean=0.0, std=self.init_std)  # Initialize the positional embeddings
+        nn.init.normal_(self.mask_token, mean=0.0, std=self.init_std)  # Initialize the mask token
+        nn.init.constant_(self.to_logits.weight, 0)  # Zero-init the output projection
 
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
@@ -117,7 +118,7 @@ class MaskGIT(nn.Module):
         Returns:
             Logits tensor of shape (B, L, vocab_size).
         """
-        B, L = x.size() # batch size and sequence length
+        B, L = x.size()  # batch size and sequence length
 
         x = self.input_embedding(x)
 
@@ -145,7 +146,7 @@ class MaskGIT(nn.Module):
         """
         B, L = seq.size()
 
-        num_trues = torch.randint(1, L+1, (B,), device=seq.device)
+        num_trues = torch.randint(1, L + 1, (B,), device=seq.device)
 
         shuffled_indices = torch.rand(B, L, device=seq.device).argsort(dim=-1)
 
@@ -159,7 +160,8 @@ class MaskGIT(nn.Module):
 
         return mask
 
-    def compute_ce_loss(self, logits: torch.Tensor, target_seq: torch.LongTensor, ignore_index: int = -100) -> torch.Tensor:
+    def compute_ce_loss(self, logits: torch.Tensor, target_seq: torch.LongTensor,
+                        ignore_index: int = -100) -> torch.Tensor:
         """
         Compute the cross-entropy loss given logits and target labels, ignoring masked target tokens.
 
@@ -186,7 +188,7 @@ class MaskGIT(nn.Module):
             The loss and a dictionary containing the perplexity metric.
         """
         # Get the full input sequence, shape (B, L)
-        seq = data_dict[self.seq_read_key] 
+        seq = data_dict[self.seq_read_key]
 
         # Generate a random mask for each sample. True = masked-out, False = not masked
         mask = self.generate_random_mask(seq)
@@ -200,7 +202,7 @@ class MaskGIT(nn.Module):
         logits = self.forward_model(seq, mask)
         loss = self.compute_ce_loss(logits, target, ignore_index=-100)
 
-        metrics_dict = {'ppl': torch.exp(loss)} # Perplexity
+        metrics_dict = {'ppl': torch.exp(loss)}  # Perplexity
         return loss, metrics_dict
 
     def get_maskgit_schedule(self, mask: torch.BoolTensor, num_steps: int = 8) -> List[int]:
@@ -240,7 +242,7 @@ class MaskGIT(nn.Module):
             top_p: float = 0.0,
             top_k: float = 0.0,
             return_history: bool = False,
-        ) -> torch.Tensor:
+    ) -> torch.Tensor:
         """
         Generate a sequence through iterative unmasking, using the MaskGIT schedule.
 
@@ -276,23 +278,28 @@ class MaskGIT(nn.Module):
 
         for step, k in enumerate(schedule):
             logits = self.forward_model(seq, mask)
-            
-            masked_indices = torch.nonzero(mask, as_tuple=False).flatten()
 
-            masked_logits = logits[:, masked_indices].squeeze()
-            
-            confidence = masked_logits.max(dim=-1).values
-            
-            _, top_k_indices = confidence.topk(k, largest=True)
+            masked_indices = torch.nonzero(mask[0], as_tuple=False).flatten()
+
+            masked_logits = logits[0, masked_indices, :]
+
+            confidence = masked_logits.max(dim=1).values
+
+            _, top_k_indices = confidence.topk(k)
             selected_positions = masked_indices[top_k_indices]
-            
-            selected_logits = masked_logits[selected_positions]
 
-            samples, _ = sample_tokens(selected_logits, temperature=temp, top_k=top_k, top_p=top_p)
+            selected_logits = masked_logits[top_k_indices, :]
 
+            # Sample tokens from the selected logits
+            samples, _ = sample_tokens(logits=selected_logits, temperature=temp, top_k=top_k, top_p=top_p)
+
+            # Update the sequence with the sampled tokens
             seq[0, selected_positions] = samples
+
+            # Update the mask to unmask the selected positions
             mask[0, selected_positions] = False
 
+            # Append to history if required
             if return_history:
                 seq_history.append(seq.clone().cpu())
                 mask_history.append(mask.clone().cpu())
