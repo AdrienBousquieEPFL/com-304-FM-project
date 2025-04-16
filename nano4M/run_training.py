@@ -182,10 +182,6 @@ def main(args):
     print(f"Model = %s" % str(model_without_ddp))
     print(f"Number of params: {n_parameters / 1e6} M")
 
-    for name, param in model.named_parameters():
-        if param.requires_grad and param.is_leaf:
-            print(name, param.shape, param.is_leaf)
-
     # Training phases
     args.total_batch_size = args.batch_size * args.world_size
     num_tokens_per_iter = args.num_tokens_per_sample * args.total_batch_size
@@ -193,9 +189,9 @@ def main(args):
     args.warmup_iters = math.ceil(args.warmup_tokens * 1e6 / num_tokens_per_iter)
     args.eval_freq_iters = math.ceil(args.eval_freq * 1e6 / num_tokens_per_iter)
     args.save_ckpt_freq_iters = math.ceil(args.save_ckpt_freq * 1e6 / num_tokens_per_iter)
-    print(f"Total tokens: {args.total_tokens}B")
+    print(f"Total tokens: {args.total_tokens}M")
     print(f"Total iters: {args.total_iters}")
-    print(f"Warmup tokens: {args.warmup_tokens}B")
+    print(f"Warmup tokens: {args.warmup_tokens}M")
     print(f"Warmup iters: {args.warmup_iters}")
     print(f"Eval freq: every {args.eval_freq_iters} iterations")
     print(f"Save ckpt freq: every {args.save_ckpt_freq_iters} iterations")
@@ -218,7 +214,7 @@ def main(args):
         log_writer.set_step(args.start_iteration)
 
     # Training loop, with evaluations at regular intervals
-    print(f"Start training for {args.total_tokens}B tokens = {args.total_iters} iterations")
+    print(f"Start training for {args.total_tokens}M tokens = {args.total_iters} iterations")
     start_time = time.time()
     
     train_stats = train_loop(

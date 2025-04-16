@@ -8,7 +8,7 @@ For detailed instructions on what should be included in the project proposal see
 
 ### Progress Report
 
-To be communicated.
+For detailed instructions on what should be included in the progress update see the [project guidelines](https://github.com/EPFL-VILAB/com-304-FM-project/blob/main/COM_304_Spring_2025_nano4M_Project_Guidelines.pdf). The progress update should be written with the latex template in the `latex-progress-update-template` folder. Note that as stated in the project guidelines the progress update should be **at most two pages long**.
 
 ### Final Report
 

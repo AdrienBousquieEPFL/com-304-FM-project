@@ -34,8 +34,8 @@ Below is the completion and homework submission timeline for each part. Please r
 - **Due:** By 23:59 on Fri 11.4.2025  
 
 ### **Part 3: nano4M**  
-- **Release:** Tue 8.4.2025  
-- **Due:** By 23:59 on Fri 18.4.2025  
+- **Release:** Mon 14.4.2025  
+- **Due:** By 23:59 on Fri 25.4.2025  
 
 ### **Progress Report (Updated Extension Proposal)**
 - **Due:** By 23:59 on Fri 18.4.2025  
@@ -118,4 +118,27 @@ Replace the placeholders as follows:
 Example Usage:
 ```bash
 sbatch submit_job.sh cfgs/nanoGPT/tinystories_d8w512.yaml abcdef1234567890 2
+```
+
+#### Multi-node Training: Submit as a Batch Job via SLURM
+
+For the third part of nano4M, we will scale up the training compute by utilizing 4 GPUs. To do this, we will train models using a multi-node GPU setup on the IZAR Cluster.
+
+Most commands remain the same as before, and we will use a specific multi-node training sbatch script.
+
+Run:
+```bash
+sbatch submit_job_multi_node_scitas.sh <config_file> <your_wandb_key>
+```
+
+Replace the placeholders as follows:
+
+- <config_file> — Path to your YAML config file
+
+- <your_wandb_key> — Your W&B API key
+
+
+Example Usage:
+```bash
+sbatch submit_job_multi_node_scitas.sh nano4M/cfgs/nano4M/multiclevr_d6-6w512.yaml abcdef1234567890
 ```

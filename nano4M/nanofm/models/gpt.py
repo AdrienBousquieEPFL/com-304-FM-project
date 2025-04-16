@@ -140,7 +140,7 @@ class GPT(nn.Module):
         loss = F.cross_entropy(logits.transpose(1, 2), target_seq, ignore_index=padding_idx)
         return loss
 
-    def forward(self, data_dict: Dict[str, Any]) -> Dict[str, Any]:
+    def forward(self, data_dict: Dict[str, Any]) -> Tuple[torch.Tensor, Dict[str, Any]]:
         """
         Forward pass through the model.
 
